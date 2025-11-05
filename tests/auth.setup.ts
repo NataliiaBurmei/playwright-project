@@ -1,5 +1,6 @@
-import { test as setup } from '@playwright/test';
+import { test as setup, expect } from '@playwright/test';
 import * as fs from 'fs';
+import * as path from 'path';
 
 const authFile = 'playwright/.auth/user.json';
 
@@ -18,12 +19,17 @@ setup('authenticate', async ({ playwright }) => {
 
   const { access_token } = await response.json();
 
-  if (!access_token) {
-    throw new Error('Authentication failed: No access token received');
-  }
+  expect(access_token).toBeTruthy();
+  expect(typeof access_token).toBe('string');
 
-  const tokenData = { token: access_token };
-  fs.writeFileSync(authFile, JSON.stringify(tokenData, null, 2));
+  ensureDirectoryExists(authFile);
+
+  const tokenData = { token: access_token };  fs.writeFileSync(authFile, JSON.stringify(tokenData, null, 2));
   await requestContext.dispose();
 });
+
+function ensureDirectoryExists(filePath: string): void {
+  const dir = path.dirname(filePath);
+  fs.mkdirSync(dir, { recursive: true });
+}
 
