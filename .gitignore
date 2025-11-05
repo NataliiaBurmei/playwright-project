@@ -6,4 +6,4 @@ dist/
 *.log
 .env
 .DS_Store
-
+/playwright/.auth/

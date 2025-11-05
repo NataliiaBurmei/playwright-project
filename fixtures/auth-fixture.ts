@@ -1,29 +1,40 @@
-import { APIRequestContext, test as base } from '@playwright/test';
+import { APIRequestContext, expect,test as base } from '@playwright/test';
 
-let accessToken: string;
+const API_BASE_URL = process.env.API_BASE_URL || 'https://api-with-bugs.practicesoftwaretesting.com';
+const API_EMAIL = process.env.API_EMAIL || 'admin@practicesoftwaretesting.com';
+const API_PASSWORD = process.env.API_PASSWORD || 'welcome01';
 
 type AuthFixtures = {
-  apiRequest: APIRequestContext;
   authenticatedApiRequest: APIRequestContext;
 };
 
 export const test = base.extend<AuthFixtures>({
-  apiRequest: async ({ request }, use) => {
-    const authResponse = await request.post('https://api-with-bugs.practicesoftwaretesting.com/users/login', {
-      headers: { 'Content-Type': 'application/json' },
-      data: { email: 'admin@practicesoftwaretesting.com', password: 'welcome01' },
+  authenticatedApiRequest: async ({ playwright }, use) => {
+    const authContext = await playwright.request.newContext({
+      baseURL: API_BASE_URL,
     });
 
-    const { access_token } = await authResponse.json();
+    const authResponse = await authContext.post('/users/login', {
+      headers: { 'Content-Type': 'application/json' },
+      data: {
+        email: API_EMAIL,
+        password: API_PASSWORD,
+      },
+    });
 
-    accessToken = access_token;
+    expect(authResponse.ok()).toBeTruthy();
+    expect(authResponse.status()).toBe(200);
 
-    await use(request);
-  },
+    const authData = await authResponse.json();
+    const accessToken = authData.access_token;
 
-  authenticatedApiRequest: async ({ playwright, apiRequest: _apiRequest }, use) => {
+    expect(accessToken).toBeTruthy();
+    expect(typeof accessToken).toBe('string');
+
+    await authContext.dispose();
+
     const authenticatedContext = await playwright.request.newContext({
-      baseURL: 'https://api-with-bugs.practicesoftwaretesting.com',
+      baseURL: API_BASE_URL,
       extraHTTPHeaders: {
         'Authorization': `Bearer ${accessToken}`,
       },
